@@ -1,0 +1,196 @@
+//******************************************/
+// Universidad del Valle de Guatemala
+// BE3029 - Electronica Digital 2
+// Oscar Ramírez
+// 21/07/2025
+// Laboratorio 04
+// MCU: ESP32 dev kit 1.0
+
+// Librerias
+#include <Arduino.h>
+#include <stdint.h>
+#include "driver/ledc.h"
+
+
+// Definiciones
+#define led_r 17
+#define led_a 15
+#define led_v 4
+#define cambio 26
+#define intensidad 35
+//Se escoge el canal
+#define pwmChannel1 0
+#define pwmChannel2 1
+#define pwmChannel3 2
+//Se escoge la frecuencia del PWM
+#define freqPWM 100
+//Se escoge la resolución
+#define resPWM 12
+
+
+
+
+// Prototipos de funciones
+void initPWM1(void);
+void initPWM2(void);
+void initPWM3(void);
+void IRAM_ATTR btt1_ISR(void);
+void IRAM_ATTR btt2_ISR(void);
+
+void initbtt1(void);
+volatile bool btt_state1;
+volatile uint32_t last_btt_state1=0;
+
+void initbtt2(void);
+volatile bool btt_state2;
+volatile uint32_t last_btt_state2 = 0;
+
+
+// Variables globales
+volatile int color;
+volatile int brillo;
+
+
+// ISRs Rutinas de Interrupcion
+void IRAM_ATTR btt1_ISR(void){
+  uint32_t tiempo_rebote1 = millis();
+  if (tiempo_rebote1 - last_btt_state1 > 50) {
+    btt_state1 = true;
+    color++;
+    last_btt_state1 = tiempo_rebote1;
+  }
+}
+
+void IRAM_ATTR btt2_ISR(void){
+  uint32_t tiempo_rebote2 = millis();
+  if (tiempo_rebote2 - last_btt_state2 > 50) {
+    btt_state2 = true;
+    brillo++;
+    last_btt_state2 = tiempo_rebote2;
+  }
+  
+}
+
+
+// Configuracion
+void setup() {
+  Serial.begin(115200);
+  pinMode(led_a, OUTPUT);
+  pinMode(led_v, OUTPUT);
+  pinMode(led_r, OUTPUT);
+
+  ledcSetup(pwmChannel1, freqPWM, resPWM);
+  ledcAttachPin(led_a, pwmChannel1);
+  ledcSetup(pwmChannel2, freqPWM, resPWM);
+  ledcAttachPin(led_v, pwmChannel2);
+  ledcSetup(pwmChannel3, freqPWM, resPWM);
+  ledcAttachPin(led_r, pwmChannel3);
+
+  color = 0;
+  brillo = 0;
+  initPWM1();
+  initPWM2();
+  initPWM3();
+  initbtt1();
+  initbtt2();
+}
+
+
+// Loop Principal
+void loop() {
+  Serial.println(color);
+
+  if(color>3){
+    color=0;
+  }
+  if(color<0){
+    color=3;
+  }
+  if(brillo>3){
+    brillo=0;
+  }
+  if(brillo<0){
+    brillo=3;
+  }
+
+  switch(color){
+    case 0:
+    ledcWrite(pwmChannel1,0);
+    ledcWrite(pwmChannel2,0);
+    ledcWrite(pwmChannel3,0);
+    break;
+    case 1:
+    initPWM1();
+    break;
+    case 2:
+    initPWM2();
+    break;
+    case 3:
+    initPWM3();
+    break;
+
+  }
+
+}
+
+
+// Otras funciones
+void initbtt1(void){
+  pinMode(cambio,INPUT);
+  attachInterrupt(cambio,&btt1_ISR,RISING);
+}
+void initbtt2(void){
+  pinMode(intensidad,INPUT);
+  attachInterrupt(intensidad,&btt2_ISR,RISING);
+}
+
+void initPWM1(void){
+  switch(brillo){
+    case 0:
+    ledcWrite(pwmChannel1,0);
+    break;
+    case 1:
+    ledcWrite(pwmChannel1,1024);
+    break;
+    case 2:
+    ledcWrite(pwmChannel1,2048);
+    break;
+    case 3:
+    ledcWrite(pwmChannel1,4096);
+    break;
+  }
+
+}
+void initPWM2(void){
+  switch(brillo){
+    case 0:
+    ledcWrite(pwmChannel2,0);
+    break;
+    case 1:
+    ledcWrite(pwmChannel2,1024);
+    break;
+    case 2:
+    ledcWrite(pwmChannel2,2048);
+    break;
+    case 3:
+    ledcWrite(pwmChannel2,4096);
+    break;
+  }
+}
+void initPWM3(void){
+  switch(brillo){
+    case 0:
+    ledcWrite(pwmChannel3,0);
+    break;
+    case 1:
+    ledcWrite(pwmChannel3,1024);
+    break;
+    case 2:
+    ledcWrite(pwmChannel3,2048);
+    break;
+    case 3:
+    ledcWrite(pwmChannel3,4096);
+    break;
+  }
+}
+
