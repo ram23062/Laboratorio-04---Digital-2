@@ -13,19 +13,20 @@
 
 
 // Definiciones
-#define led_r 17
-#define led_a 15
+#define led_r 15
+#define led_a 17
 #define led_v 4
-#define cambio 26
-#define intensidad 35
+#define btt1 12
+#define btt2 25
+#define btt4 36
+#define servo 19
+
+
 //Se escoge el canal
 #define pwmChannel1 0
 #define pwmChannel2 1
 #define pwmChannel3 2
-//Se escoge la frecuencia del PWM
-#define freqPWM 100
-//Se escoge la resolución
-#define resPWM 12
+#define pwmChannel4 3
 
 
 
@@ -36,7 +37,10 @@ void initPWM2(void);
 void initPWM3(void);
 void IRAM_ATTR btt1_ISR(void);
 void IRAM_ATTR btt2_ISR(void);
+void IRAM_ATTR btt3_ISR(void);
+void IRAM_ATTR btt4_ISR(void);
 
+//Habilitar las interrupciones de los botones 
 void initbtt1(void);
 volatile bool btt_state1;
 volatile uint32_t last_btt_state1=0;
@@ -45,10 +49,25 @@ void initbtt2(void);
 volatile bool btt_state2;
 volatile uint32_t last_btt_state2 = 0;
 
+void initbtt3(void);
+volatile bool btt_state3;
+volatile bool btt_liberado3 = true;
+volatile uint32_t last_btt_state3=0;
+
+void initbtt4(void);
+volatile bool btt_state4;
+volatile bool btt_liberado4 = true;
+volatile uint32_t last_btt_state4 = 0;
 
 // Variables globales
 volatile int color;
-volatile int brillo;
+volatile int brillo1;
+volatile int brillo2;
+volatile int brillo3;
+volatile int posicion_servo = 2;
+
+//Posibles posiciones del servo
+const int posiciones[5] = {410, 348, 307, 266, 205};
 
 
 // ISRs Rutinas de Interrupcion
@@ -65,10 +84,26 @@ void IRAM_ATTR btt2_ISR(void){
   uint32_t tiempo_rebote2 = millis();
   if (tiempo_rebote2 - last_btt_state2 > 50) {
     btt_state2 = true;
-    brillo++;
     last_btt_state2 = tiempo_rebote2;
   }
-  
+}
+
+void IRAM_ATTR btt3_ISR(void){
+  uint32_t tiempo_rebote3 = millis();
+  if (tiempo_rebote3 - last_btt_state3 > 50 && btt_liberado3) {
+    btt_state3 = true;
+    btt_liberado3 = false;
+    last_btt_state3 = tiempo_rebote3;
+  }
+}
+
+void IRAM_ATTR btt4_ISR(void){
+  uint32_t tiempo_rebote4 = millis();
+  if (tiempo_rebote4 - last_btt_state4 > 50 && btt_liberado4) {
+    btt_state4 = true;
+    btt_liberado4 = false;
+    last_btt_state4 = tiempo_rebote4;
+  }
 }
 
 
@@ -79,73 +114,168 @@ void setup() {
   pinMode(led_v, OUTPUT);
   pinMode(led_r, OUTPUT);
 
-  ledcSetup(pwmChannel1, freqPWM, resPWM);
-  ledcAttachPin(led_a, pwmChannel1);
-  ledcSetup(pwmChannel2, freqPWM, resPWM);
-  ledcAttachPin(led_v, pwmChannel2);
-  ledcSetup(pwmChannel3, freqPWM, resPWM);
-  ledcAttachPin(led_r, pwmChannel3);
+ //Inicialización de los flags de botones
+  btt_state3 = false;
+  btt_state4 = false;
 
+  //Configuración de la LED azul
+  ledcSetup(pwmChannel1, 100, 12);
+  ledcAttachPin(led_r, pwmChannel1);
+
+  //Configuración de la LED verde
+  ledcSetup(pwmChannel2, 100, 12);
+  ledcAttachPin(led_v, pwmChannel2);
+
+  //Configuración de la LED roja
+  ledcSetup(pwmChannel3, 100, 12);
+  ledcAttachPin(led_a, pwmChannel3);
+
+  //Configuración del Servo
+  ledcSetup(pwmChannel4, 50, 12);
+  ledcAttachPin(servo, pwmChannel4);
+  ledcWrite(pwmChannel4, posiciones[posicion_servo]);
+
+  //Iniciación de los contadores
   color = 0;
-  brillo = 0;
+  brillo1 = 0;
+  brillo2 = 0;
+  brillo3 = 0;
   initPWM1();
   initPWM2();
   initPWM3();
   initbtt1();
   initbtt2();
+  initbtt3();
+  initbtt4();
 }
 
 
 // Loop Principal
 void loop() {
+  Serial.println(posiciones[posicion_servo]);
+  Serial.println("Modo");
   Serial.println(color);
+  delay(50);
 
+  //Límites de cada contador
+  //Cambio de LED
   if(color>3){
     color=0;
   }
   if(color<0){
     color=3;
   }
-  if(brillo>3){
-    brillo=0;
+  //Cambio de intensidad LED roja
+  if(brillo1>3){
+    brillo1=0;
   }
-  if(brillo<0){
-    brillo=3;
+  if(brillo1<0){
+    brillo1=3;
+  }
+  //Cambio de intensidad LED verde
+  if(brillo2>3){
+    brillo2=0;
+  }
+  if(brillo2<0){
+    brillo2=3;
+  }
+  //Cambio de intensidad LED azul
+  if(brillo3>3){
+    brillo3=0;
+  }
+  if(brillo3<0){
+    brillo3=3;
   }
 
+  //Cambio de intensidad según la posición
+  if (btt_state2) {
+     btt_state2 = false;
+     // Incrementa solo el brillo del color actual
+     if (color == 0) brillo1++;
+     else if (color == 1) brillo2++;
+     else if (color == 2) brillo3++;
+   }
+  //Cambio de posición del servo
+  if (btt_state3) {  // Botón izquierda
+    btt_state3 = false;
+    if (posicion_servo > 0) {
+      posicion_servo--;
+      ledcWrite(pwmChannel4, posiciones[posicion_servo]);
+    }
+  }
+if (btt_state4) {  // Botón derecha
+    btt_state4 = false;
+    if (posicion_servo < 4) {
+      posicion_servo++;
+      ledcWrite(pwmChannel4, posiciones[posicion_servo]);
+    }
+  }
+  
+    // Verificar liberación de botones
+  if (digitalRead(btt3) == LOW) btt_liberado3 = true;
+  if (digitalRead(btt4) == LOW) btt_liberado4 = true;
+
+  //Cambio de LED con un switch case
   switch(color){
     case 0:
-    ledcWrite(pwmChannel1,0);
-    ledcWrite(pwmChannel2,0);
-    ledcWrite(pwmChannel3,0);
-    break;
-    case 1:
     initPWM1();
     break;
-    case 2:
+    case 1:
     initPWM2();
     break;
-    case 3:
+    case 2:
     initPWM3();
     break;
-
+    case 3:
+    if (posicion_servo == 0){
+      ledcWrite(pwmChannel1,0);
+      ledcWrite(pwmChannel2,0);
+      ledcWrite(pwmChannel3,0);
+    }else if (posicion_servo == 1){
+      ledcWrite(pwmChannel1,1024);
+      ledcWrite(pwmChannel2,1024);
+      ledcWrite(pwmChannel3,1024);
+    }else if (posicion_servo == 2){
+      ledcWrite(pwmChannel1,2048);
+      ledcWrite(pwmChannel2,2048);
+      ledcWrite(pwmChannel3,2048);
+    }else if (posicion_servo == 3){
+      ledcWrite(pwmChannel1,4096);
+      ledcWrite(pwmChannel2,4096);
+      ledcWrite(pwmChannel3,4096);
+    }else if (posicion_servo == 4){
+      ledcWrite(pwmChannel1,0);
+      ledcWrite(pwmChannel2,0);
+      ledcWrite(pwmChannel3,0);
+    }
+    break;
   }
 
 }
 
 
 // Otras funciones
+//Funciones de interrupción para los botones
 void initbtt1(void){
-  pinMode(cambio,INPUT);
-  attachInterrupt(cambio,&btt1_ISR,RISING);
+  pinMode(btt1,INPUT);
+  attachInterrupt(btt1,&btt1_ISR,RISING);
 }
 void initbtt2(void){
-  pinMode(intensidad,INPUT);
-  attachInterrupt(intensidad,&btt2_ISR,RISING);
+  pinMode(btt2,INPUT);
+  attachInterrupt(btt2,&btt2_ISR,RISING);
+}
+void initbtt3(void){
+  pinMode(btt3,INPUT);
+  attachInterrupt(btt3,&btt3_ISR,RISING);
+}
+void initbtt4(void){
+  pinMode(btt4,INPUT);
+  attachInterrupt(btt4,&btt4_ISR,RISING);
 }
 
+//Funciones para los PWM
 void initPWM1(void){
-  switch(brillo){
+  switch(brillo1){
     case 0:
     ledcWrite(pwmChannel1,0);
     break;
@@ -162,7 +292,7 @@ void initPWM1(void){
 
 }
 void initPWM2(void){
-  switch(brillo){
+  switch(brillo2){
     case 0:
     ledcWrite(pwmChannel2,0);
     break;
@@ -178,7 +308,7 @@ void initPWM2(void){
   }
 }
 void initPWM3(void){
-  switch(brillo){
+  switch(brillo3){
     case 0:
     ledcWrite(pwmChannel3,0);
     break;
@@ -193,4 +323,5 @@ void initPWM3(void){
     break;
   }
 }
+
 
