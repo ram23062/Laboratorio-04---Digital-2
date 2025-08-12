@@ -232,16 +232,16 @@ if (btt_state4) {  // Botón derecha
       ledcWrite(pwmChannel2,0);
       ledcWrite(pwmChannel3,0);
     }else if (posicion_servo == 1){
-      ledcWrite(pwmChannel1,1024);
-      ledcWrite(pwmChannel2,1024);
-      ledcWrite(pwmChannel3,1024);
-    }else if (posicion_servo == 2){
-      ledcWrite(pwmChannel1,2048);
-      ledcWrite(pwmChannel2,2048);
-      ledcWrite(pwmChannel3,2048);
-    }else if (posicion_servo == 3){
       ledcWrite(pwmChannel1,4096);
+      ledcWrite(pwmChannel2,0);
+      ledcWrite(pwmChannel3,0);
+    }else if (posicion_servo == 2){
+      ledcWrite(pwmChannel1,0);
       ledcWrite(pwmChannel2,4096);
+      ledcWrite(pwmChannel3,0);
+    }else if (posicion_servo == 3){
+      ledcWrite(pwmChannel1,0);
+      ledcWrite(pwmChannel2,0);
       ledcWrite(pwmChannel3,4096);
     }else if (posicion_servo == 4){
       ledcWrite(pwmChannel1,0);
