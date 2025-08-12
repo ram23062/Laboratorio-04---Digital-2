@@ -18,6 +18,7 @@
 #define led_v 4
 #define btt1 12
 #define btt2 25
+#define btt3 34
 #define btt4 36
 #define servo 19
 
@@ -67,7 +68,7 @@ volatile int brillo3;
 volatile int posicion_servo = 2;
 
 //Posibles posiciones del servo
-const int posiciones[5] = {410, 348, 307, 266, 205};
+const int posiciones[5] = {8192, 6553, 4915, 3277, 1638};
 
 
 // ISRs Rutinas de Interrupcion
@@ -131,7 +132,7 @@ void setup() {
   ledcAttachPin(led_a, pwmChannel3);
 
   //Configuración del Servo
-  ledcSetup(pwmChannel4, 50, 12);
+  ledcSetup(pwmChannel4, 50, 16);
   ledcAttachPin(servo, pwmChannel4);
   ledcWrite(pwmChannel4, posiciones[posicion_servo]);
 
